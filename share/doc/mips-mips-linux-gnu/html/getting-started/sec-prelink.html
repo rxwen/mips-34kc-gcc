@@ -1,0 +1,105 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>4.5. Using the Prelinker</title><link rel="stylesheet" type="text/css" href="cs.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.0"><link rel="home" href="index.html" title="Sourcery CodeBench Lite"><link rel="up" href="chap-building.html" title="Chapter 4. Using Sourcery CodeBench from the Command Line"><link rel="prev" href="sec-remote-debugging.html" title="4.4. Running Applications from GDB"><link rel="next" href="sprite.html" title="Chapter 5. Sourcery CodeBench Debug Sprite"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">4.5. Using the Prelinker</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="sec-remote-debugging.html">Prev</a> </td><th width="60%" align="center">Chapter 4. Using Sourcery CodeBench from the Command Line</th><td width="20%" align="right"> <a accesskey="n" href="sprite.html">Next</a></td></tr></table><hr></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="sec-prelink"></a>4.5. Using the Prelinker</h2></div></div></div><p>
+  You can make programs that use ELF shared libraries start up faster
+  by processing the binaries with the prelinker.  This
+  utility is called the <em class="firstterm">prelinker</em> because it
+  preprocesses the application binaries and shared libraries before
+  dynamic linking.  On the other hand, prelinking is performed 
+  <span class="emphasis"><em>after</em></span> the normal linking step
+  (<code class="command">mips-linux-gnu-ld</code> invocation)
+  that builds the executables and shared libraries.
+  </p><p>
+  Prelinking operates by performing some of the functions of the
+  dynamic linker in advance.  Specifically, it pre-assigns ELF shared
+  libraries to virtual address slots that are the same in all
+  prelinked applications, and writes the modified relocation
+  information back to the ELF files for the affected libraries and
+  applications.  At program startup time, the dynamic linker checks
+  whether the precomputed shared library relocations are still valid;
+  if they are, several initialization steps can be skipped, resulting
+  in an improved startup time.
+  If not (for example, if a shared library has been modified since
+  the program was prelinked), it falls back on the normal dynamic linking
+  process.  Prelinking is reversible and can be re-run to perform
+  incremental updates when applications or the libraries they depend
+  on change.
+  </p><p>
+  Prelinking only works on shared libraries that are explicitly linked
+  with application programs.  If your application uses
+  <code class="function">dlopen</code> to load shared libraries, that operation
+  is not affected by the prelinker.  This is because the prelinker
+  cannot predict in advance which libraries are to be loaded with
+  <code class="function">dlopen</code>, or in what order.
+  </p><p>
+  For best results, the prelinker should be run on an entire set of
+  executables and their dependent libraries at once, rather than on
+  application executables individually.  For example, the native
+  prelinker shipped with many Linux systems is intended to operate on
+  all of the standard system utilities and libraries.  The version of
+  the prelinker included in Sourcery CodeBench Lite additionally supports
+  prelinking of a cross-built root file system.  Invoke
+  <code class="command">mips-linux-gnu-prelink</code> with the
+  <code class="option">--root=<em class="replaceable"><code>pathname</code></em></code>
+  command-line option to specify the path to the root of the target
+  file system.  All other pathnames referenced by the prelinker, including
+  those of any executables specified on the command line, 
+  are relative to this root.
+  </p><div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="idm47117095507184"></a>4.5.1. Configuration File</h3></div></div></div><p>
+    The first step in running the prelinker is to create a
+    configuration file.  This is canonically called
+    <code class="filename">/etc/prelink.conf</code> in the target file system.
+    Even if you plan to only prelink selected application binaries,
+    you should create a configuration file listing the directories to
+    search for the shared libraries referenced by the applications.
+    The prelinker does not prelink against libraries that are neither
+    findable from the configuration file, nor explicitly listed on the
+    command line.
+    </p><p>
+    The contents of the configuration file are a list of directories
+    on the target file system to recursively scan, and patterns
+    matching names of files to be skipped.  Specifically, it can
+    contain lines of the following forms:
+    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>
+        Comment lines starting with <code class="literal">#</code>.
+        </p></li><li class="listitem"><p>
+        Directory names to be recursively searched.  Optionally, directory
+        names can be prefixed with options <code class="option">-l</code> (do not search
+        across file systems) or <code class="option">-h</code> (follow symbolic links).
+        </p></li><li class="listitem"><p>
+        Blacklist patterns prefixed with the <code class="option">-b</code> option,
+        which specify directories and files to be skipped during the recursive
+        search.  The operand can be either a directory name, the name of an
+        individual file, or a glob pattern to be matched against filenames
+        in each directory.
+        </p></li></ul></div><p>
+    For example, here is a simple configuration file.
+    </p><pre class="programlisting"># Search in these directories.
+-l /lib
+-l /usr/lib
+# Ignore files matching these patterns.
+-b /lib/firmware
+-b *.h
+-b *.xml
+-b *.xslt</pre></div><div class="section"><div class="titlepage"><div><div><h3 class="title"><a name="idm47117095497648"></a>4.5.2. Invoking the Prelinker</h3></div></div></div><p>
+    The prelinker has two primary modes of operation:
+    </p><div class="orderedlist"><ol class="orderedlist" type="1"><li class="listitem"><p>
+        Prelink only certain executables against a set of libraries.
+        </p><pre class="screen">&gt; mips-linux-gnu-prelink --root=<em class="replaceable"><code>pathname</code></em> <em class="replaceable"><code>executable1</code></em> ...</pre><p>
+        In this case, the executables to be prelinked are specified on the 
+        command line.  The configuration file is used only to search for the 
+        shared libraries that are used by the given programs.  If you wish,
+        you can also specify additional library pathnames on the command line.
+        </p></li><li class="listitem"><p>
+        Prelink all the libraries and executables in a given set of
+        directories.
+        </p><pre class="screen">&gt; mips-linux-gnu-prelink -a --root=<em class="replaceable"><code>pathname</code></em></pre><p>
+        If the <code class="option">-a</code> option is specified, then the directories
+        listed in the configuration file are searched for executables
+        to be prelinked, as well as for the libraries they reference.
+        While this usage also permits additional executables and
+        libraries to be specified on the command line, the recommended
+        practice is to list all files of interest in the configuration
+        file instead.
+        </p></li></ol></div><p>
+    Refer to the man page for the prelinker for documentation for other
+    command-line options.
+    </p></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="sec-remote-debugging.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="chap-building.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="sprite.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">4.4. Running Applications from GDB </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 5. Sourcery CodeBench Debug Sprite</td></tr></table></div></body></html>

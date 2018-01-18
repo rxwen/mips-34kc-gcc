@@ -1,0 +1,81 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>4.3. Running Applications with QEMU</title><link rel="stylesheet" type="text/css" href="cs.css"><meta name="generator" content="DocBook XSL Stylesheets V1.78.0"><link rel="home" href="index.html" title="Sourcery CodeBench Lite"><link rel="up" href="chap-building.html" title="Chapter 4. Using Sourcery CodeBench from the Command Line"><link rel="prev" href="ch04s02.html" title="4.2. Running Applications on the Target System"><link rel="next" href="sec-remote-debugging.html" title="4.4. Running Applications from GDB"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">4.3. Running Applications with QEMU</th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ch04s02.html">Prev</a> </td><th width="60%" align="center">Chapter 4. Using Sourcery CodeBench from the Command Line</th><td width="20%" align="right"> <a accesskey="n" href="sec-remote-debugging.html">Next</a></td></tr></table><hr></div><div class="section"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="qemu-user-space"></a>4.3. Running Applications with QEMU</h2></div></div></div><p>
+    On Linux hosts, Sourcery CodeBench Lite includes the QEMU user-space emulator.  
+    This is a program which runs on your host computer and allows you
+    to run and debug MIPS GNU/Linux applications without target hardware.
+    Because QEMU's user-space emulation works by translating Linux system 
+    calls made by the target program into corresponding calls on the host 
+    Linux system, you cannot run this emulator on a Windows host.
+  </p><p>
+    To use QEMU, you first need to find the sysroot directory in your 
+    Sourcery CodeBench Lite installation that matches your compilation options, 
+    as described in <a class="xref" href="included-libraries.html" title="3.5. Using Sourcery CodeBench Lite on GNU/Linux Targets">Section 3.5, &#8220;Using Sourcery CodeBench Lite on GNU/Linux Targets&#8221;</a>.  
+    For example, the sysroot for the default multilib is in the 
+    <code class="filename">mips-linux-gnu/libc</code> subdirectory of your install 
+    directory.
+  </p><p>
+    Applications run with the QEMU emulator share the environment and file 
+    system of the host computer, so you do not need to copy the sysroot.
+    However, you must tell QEMU where to find the sysroot on the host.  
+    You can do this by providing appropriate linker options when
+    building your application, as described in
+    <a class="xref" href="included-libraries.html#sec-linker-sysroot" title="3.5.2. Using Linker Options to Specify the Sysroot Location">Section 3.5.2, &#8220;Using Linker Options to Specify the Sysroot Location&#8221;</a>.
+    
+    <span class="phrase">
+      Alternatively, you can invoke the dynamic linker directly to run
+      your program, as described in
+      <a class="xref" href="included-libraries.html#sec-runtime-sysroot" title="3.5.3. Specifying the Sysroot Location at Runtime">Section 3.5.3, &#8220;Specifying the Sysroot Location at Runtime&#8221;</a>.
+    </span>
+  </p><p>
+    If you use linker options to set the sysroot pathname, you can
+    invoke QEMU as:
+    </p><pre class="screen">&gt; mips-linux-gnu-qemu <em class="replaceable"><code>program</code></em> <em class="replaceable"><code>arguments...</code></em></pre><p>
+    where <em class="replaceable"><code>program</code></em> is the executable to run, and
+    <em class="replaceable"><code>arguments</code></em> are any command-line arguments to
+    your program.
+  </p><p>
+    If you want to invoke the dynamic linker directly instead, use a command
+    similar to:
+    </p><pre class="screen">&gt; mips-linux-gnu-qemu <em class="replaceable"><code>sysroot</code></em>/lib/ld.so.1 \
+  --library-path <em class="replaceable"><code>sysroot</code></em>/lib:<em class="replaceable"><code>sysroot</code></em>/usr/lib \
+  <em class="replaceable"><code>program</code></em> <em class="replaceable"><code>arguments...</code></em></pre><p>
+    Refer to <a class="xref" href="included-libraries.html#sec-runtime-sysroot" title="3.5.3. Specifying the Sysroot Location at Runtime">Section 3.5.3, &#8220;Specifying the Sysroot Location at Runtime&#8221;</a> for additional details 
+    on running the dynamic linker.
+  </p><p>
+    You can specify emulation of a specific CPU by providing the 
+    <code class="option">--cpu</code> option to QEMU.
+    
+    
+    
+    
+    <span class="phrase">
+      The default is <code class="literal">24Kf</code>.  Additional supported CPU
+      emulations include <code class="literal">4Kc</code>, <code class="literal">4Km</code>, 
+      <code class="literal">4KEcR1</code>,
+      <code class="literal">4KEmR1</code>, <code class="literal">4KEc</code>, <code class="literal">4KEm</code>, 
+      <code class="literal">24Kc</code>, <code class="literal">34Kf</code>, 
+      <code class="literal">M14K</code>, and <code class="literal">M14Kc</code>.
+    </span>
+  </p><p>
+    By default, QEMU reports the minimum Linux kernel version required
+    by the GNU C library included with this release of Sourcery CodeBench 
+    to applications via the 
+    <code class="function">uname</code> system call.  
+    You can specify some other kernel version using the 
+    <code class="option">-r</code> command-line option.  
+    QEMU's emulation is generally independent of the kernel version 
+    on the host Linux system.
+  </p><p>
+    QEMU includes a built-in GDB server which you can use to debug your 
+    program with GDB.  
+    Start QEMU with the <code class="option">-g <em class="replaceable"><code>port</code></em></code> 
+    command-line option.  You can generally choose any port number that is not
+    already in use on your host system.
+    Then, follow the instructions in <a class="xref" href="sec-remote-debugging.html#connecting-to-gdbserver" title="4.4.2. Connecting to an External GDB Server">Section 4.4.2, &#8220;Connecting to an External GDB Server&#8221;</a> 
+    to connect from GDB.
+  </p><p>
+    The version of QEMU included with Sourcery CodeBench Lite for MIPS GNU/Linux is
+    configured to run in user-space emulation mode only, and other QEMU 
+    features not documented here are not supported in Sourcery CodeBench Lite.  
+    For additional information about QEMU, visit the 
+    <a class="ulink" href="http://fabrice.bellard.free.fr/qemu" target="_top">QEMU web site</a>.
+  </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ch04s02.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="chap-building.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="sec-remote-debugging.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">4.2. Running Applications on the Target System </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 4.4. Running Applications from GDB</td></tr></table></div></body></html>
